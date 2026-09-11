@@ -1,0 +1,10 @@
+{
+  // Cloudflare Workers - static assets only (no server-side script).
+  // Without this file `npx wrangler deploy` falls back to auto-detection,
+  // which fails whenever the repo root has no HTML file.
+  "name": "my-app-lecture-26-2",
+  "compatibility_date": "2026-09-11",
+  "assets": {
+    "directory": "./public"
+  }
+}
