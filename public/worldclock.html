@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>세계 시차 계산기</title>
+
+  <link rel="stylesheet" href="https://pyscript.net/releases/2025.8.1/core.css">
+  <script type="module" src="https://pyscript.net/releases/2025.8.1/core.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 40px 20px;
+      background: #f7f9fc;
+      color: #1c2536;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    .wrap {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      color: #0047AB;
+    }
+
+    .lead {
+      margin: 0 0 28px;
+      color: #5a6577;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e2e8f2;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #c7d0e0;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #1c2536;
+    }
+
+    input:focus {
+      outline: 2px solid #0047AB;
+      border-color: #0047AB;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #ffffff;
+      background: #0047AB;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #00379e;
+    }
+
+    button:disabled {
+      background: #a9b5c9;
+      cursor: not-allowed;
+    }
+
+    .notice {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #c0392b;
+      min-height: 20px;
+    }
+
+    .clock {
+      display: flex;
+      justify-content: space-between;
+      padding: 11px 14px;
+      border-bottom: 1px solid #eef1f7;
+      font-size: 15px;
+    }
+
+    .clock:last-child {
+      border-bottom: none;
+    }
+
+    .clock.seoul {
+      background: #eef3fd;
+      color: #0047AB;
+      font-weight: bold;
+      border-radius: 6px;
+    }
+
+    .city {
+      color: inherit;
+    }
+
+    .time {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .day {
+      color: #8b95a7;
+      font-size: 13px;
+      margin-right: 8px;
+    }
+
+    .clock.seoul .day {
+      color: #4a6fc4;
+    }
+
+    .empty {
+      color: #8b95a7;
+      font-size: 15px;
+      text-align: center;
+      padding: 24px 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>세계 시차 계산기</h1>
+    <p class="lead">
+      한국 시각을 0부터 23 사이의 정수로 넣으면,
+      24개 시간대의 대표 도시가 지금 몇 시인지 알려줍니다.
+    </p>
+
+    <div class="panel">
+      <label for="hour">한국은 지금 몇 시인가요?</label>
+      <div class="row">
+        <input id="hour" type="text" placeholder="예: 14" autocomplete="off">
+        <button id="btn" py-click="run" disabled>로딩 중</button>
+      </div>
+      <div class="notice" id="notice"></div>
+    </div>
+
+    <div class="panel" id="result">
+      <div class="empty">시각을 입력하고 버튼을 눌러 주세요.</div>
+    </div>
+  </div>
+
+  <script type="py">
+from pyscript import document
+
+# 시간대별 대표 도시와 한국 기준 시차
+cities = ["파고파고", "호놀룰루", "앵커리지", "로스앤젤레스", "덴버", "멕시코시티",
+          "뉴욕", "산티아고", "상파울루", "페르난두지노로냐", "아조레스", "런던",
+          "파리", "카이로", "모스크바", "두바이", "카라치", "다카",
+          "방콕", "베이징", "서울", "시드니", "누메아", "오클랜드"]
+
+diffs = [-20, -19, -18, -17, -16, -15,
+         -14, -13, -12, -11, -10, -9,
+         -8, -7, -6, -5, -4, -3,
+         -2, -1, 0, 1, 2, 3]
+
+digits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+
+
+# 입력한 글자가 모두 숫자인지 확인하는 함수
+def is_integer(text):
+    ok = 1
+    if len(text) == 0:
+        ok = 0
+    for i in range(len(text)):
+        if text[i] not in digits:
+            ok = 0
+    return ok
+
+
+# 한국 시각을 받아 도시별 날짜와 시각을 계산하는 함수
+def world_time(hour):
+    days = []
+    hours = []
+    for i in range(len(cities)):
+        total = hour + diffs[i]
+        if total < 0:
+            day = "어제"
+        elif total >= 24:
+            day = "내일"
+        else:
+            day = "오늘"
+        days.append(day)
+        hours.append(total % 24)
+    return [days, hours]
+
+
+# 계산 결과를 화면에 그리는 함수
+def draw(data):
+    days = data[0]
+    hours = data[1]
+    html = ""
+    for i in range(len(cities)):
+        if cities[i] == "서울":
+            html = html + "<div class='clock seoul'>"
+        else:
+            html = html + "<div class='clock'>"
+        html = html + f"<span class='city'>{cities[i]}</span>"
+        html = html + f"<span class='time'><span class='day'>{days[i]}</span>{hours[i]}시</span></div>"
+    document.querySelector("#result").innerHTML = html
+
+
+# 버튼을 눌렀을 때 실행되는 함수
+def run(event):
+    text = document.querySelector("#hour").value
+    notice = document.querySelector("#notice")
+
+    if is_integer(text) == 0:
+        notice.innerHTML = "정수를 입력해 주세요."
+    else:
+        hour = int(text)
+        if hour > 23:
+            notice.innerHTML = "0부터 23 사이의 정수를 입력해 주세요."
+        else:
+            notice.innerHTML = ""
+            data = world_time(hour)
+            draw(data)
+
+
+# 파이썬 준비가 끝나면 버튼을 켠다
+button = document.querySelector("#btn")
+button.disabled = False
+button.innerHTML = "변환"
+  </script>
+</body>
+</html>
