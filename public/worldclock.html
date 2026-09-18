@@ -18,7 +18,7 @@
     }
 
     .wrap {
-      max-width: 560px;
+      max-width: 600px;
       margin: 0 auto;
     }
 
@@ -99,10 +99,11 @@
 
     .clock {
       display: flex;
+      align-items: center;
       justify-content: space-between;
-      padding: 11px 14px;
+      gap: 12px;
+      padding: 12px 14px;
       border-bottom: 1px solid #eef1f7;
-      font-size: 15px;
     }
 
     .clock:last-child {
@@ -111,27 +112,54 @@
 
     .clock.seoul {
       background: #eef3fd;
-      color: #0047AB;
-      font-weight: bold;
       border-radius: 6px;
     }
 
+    .place {
+      min-width: 0;
+    }
+
     .city {
-      color: inherit;
+      font-size: 15px;
+    }
+
+    .clock.seoul .city {
+      color: #0047AB;
+      font-weight: bold;
+    }
+
+    .gap {
+      display: block;
+      margin-top: 3px;
+      font-size: 12px;
+      color: #8b95a7;
+    }
+
+    .clock.seoul .gap {
+      color: #4a6fc4;
     }
 
     .time {
+      flex-shrink: 0;
+      text-align: right;
+      font-size: 16px;
       font-variant-numeric: tabular-nums;
     }
 
-    .day {
-      color: #8b95a7;
-      font-size: 13px;
-      margin-right: 8px;
+    .clock.seoul .time {
+      color: #0047AB;
+      font-weight: bold;
     }
 
-    .clock.seoul .day {
-      color: #4a6fc4;
+    .tag {
+      display: inline-block;
+      margin-right: 6px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #eceff5;
+      color: #5a6577;
+      font-size: 12px;
+      vertical-align: middle;
     }
 
     .empty {
@@ -168,11 +196,16 @@
   <script type="py">
 from pyscript import document
 
-# 시간대별 대표 도시와 한국 기준 시차
+# 시간대별 대표 도시, 나라, 한국 기준 시차
 cities = ["파고파고", "호놀룰루", "앵커리지", "로스앤젤레스", "덴버", "멕시코시티",
-          "뉴욕", "산티아고", "상파울루", "페르난두지노로냐", "아조레스", "런던",
+          "뉴욕", "산티아고", "상파울루", "페르난두지노로냐", "폰타델가다", "런던",
           "파리", "카이로", "모스크바", "두바이", "카라치", "다카",
           "방콕", "베이징", "서울", "시드니", "누메아", "오클랜드"]
+
+nations = ["미국령 사모아", "미국", "미국", "미국", "미국", "멕시코",
+           "미국", "칠레", "브라질", "브라질", "포르투갈", "영국",
+           "프랑스", "이집트", "러시아", "아랍에미리트", "파키스탄", "방글라데시",
+           "태국", "중국", "대한민국", "호주", "뉴칼레도니아", "뉴질랜드"]
 
 diffs = [-20, -19, -18, -17, -16, -15,
          -14, -13, -12, -11, -10, -9,
@@ -193,35 +226,76 @@ def is_integer(text):
     return ok
 
 
-# 한국 시각을 받아 도시별 날짜와 시각을 계산하는 함수
+# 한국 시각을 받아 도시별 날짜표시, 오전오후, 시각을 계산하는 함수
 def world_time(hour):
-    days = []
+    marks = []
+    ampms = []
     hours = []
     for i in range(len(cities)):
         total = hour + diffs[i]
+
+        # 현지 날짜가 한국과 같은 날인지
         if total < 0:
-            day = "어제"
+            mark = "하루 전 날짜"
         elif total >= 24:
-            day = "내일"
+            mark = "하루 뒤 날짜"
         else:
-            day = "오늘"
-        days.append(day)
-        hours.append(total % 24)
-    return [days, hours]
+            mark = ""
+
+        # 24시간을 오전 오후로 바꾸기
+        h = total % 24
+        if h == 0:
+            ampm = "밤"
+            h12 = 12
+        elif h == 12:
+            ampm = "낮"
+            h12 = 12
+        elif h < 12:
+            ampm = "오전"
+            h12 = h
+        else:
+            ampm = "오후"
+            h12 = h - 12
+
+        marks.append(mark)
+        ampms.append(ampm)
+        hours.append(h12)
+    return [marks, ampms, hours]
+
+
+# 시차를 읽기 쉬운 문장으로 바꾸는 함수
+def gap_text(diff):
+    if diff == 0:
+        text = "기준 도시"
+    elif diff < 0:
+        text = f"한국보다 {-diff}시간 느림"
+    else:
+        text = f"한국보다 {diff}시간 빠름"
+    return text
 
 
 # 계산 결과를 화면에 그리는 함수
 def draw(data):
-    days = data[0]
-    hours = data[1]
+    marks = data[0]
+    ampms = data[1]
+    hours = data[2]
     html = ""
     for i in range(len(cities)):
         if cities[i] == "서울":
             html = html + "<div class='clock seoul'>"
         else:
             html = html + "<div class='clock'>"
-        html = html + f"<span class='city'>{cities[i]}</span>"
-        html = html + f"<span class='time'><span class='day'>{days[i]}</span>{hours[i]}시</span></div>"
+
+        html = html + "<span class='place'>"
+        html = html + f"<span class='city'>{cities[i]} ({nations[i]})</span>"
+        html = html + f"<span class='gap'>{gap_text(diffs[i])}</span>"
+        html = html + "</span>"
+
+        html = html + "<span class='time'>"
+        if len(marks[i]) > 0:
+            html = html + f"<span class='tag'>{marks[i]}</span>"
+        html = html + f"{ampms[i]} {hours[i]}시</span>"
+        html = html + "</div>"
     document.querySelector("#result").innerHTML = html
 
 
