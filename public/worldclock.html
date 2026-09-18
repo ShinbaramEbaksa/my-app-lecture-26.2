@@ -214,6 +214,10 @@ diffs = [-20, -19, -18, -17, -16, -15,
 
 digits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
+# 0시부터 23시까지를 12시간제 숫자로 바꾼 표
+hour12 = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+          12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
 
 # 입력한 글자가 모두 숫자인지 확인하는 함수
 def is_integer(text):
@@ -246,16 +250,13 @@ def world_time(hour):
         h = total % 24
         if h == 0:
             ampm = "밤"
-            h12 = 12
         elif h == 12:
             ampm = "낮"
-            h12 = 12
         elif h < 12:
             ampm = "오전"
-            h12 = h
         else:
             ampm = "오후"
-            h12 = h - 12
+        h12 = hour12[h]
 
         marks.append(mark)
         ampms.append(ampm)
@@ -268,7 +269,7 @@ def gap_text(diff):
     if diff == 0:
         text = "기준 도시"
     elif diff < 0:
-        text = f"한국보다 {-diff}시간 느림"
+        text = f"한국보다 {diff * -1}시간 느림"
     else:
         text = f"한국보다 {diff}시간 빠름"
     return text
