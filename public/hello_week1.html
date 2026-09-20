@@ -1,0 +1,24 @@
+<!--# app.js : 동작 로직
+# 일반적으로 별도 app.js을 생성하지만, 이번에는 index.html에서 동작 로직을 지정했습니다.-->
+
+<html>
+<body>
+  <h1>Hello World!</h1>
+  <h3>Gunhee Lee</h3>
+</body>
+
+  <style>
+    h1, h3 { color: black; cursor: pointer; }
+  </style>
+
+  <script>
+    document.querySelector('h1').addEventListener('click', function () {
+      this.style.color = 'red';
+    });
+
+    document.querySelector('h3').addEventListener('click', function () {
+      this.style.color = 'blue';
+    });
+  </script>
+
+</html>

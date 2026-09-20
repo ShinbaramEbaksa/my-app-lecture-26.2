@@ -1,24 +1,112 @@
-<!--# app.js : 동작 로직
-# 일반적으로 별도 app.js을 생성하지만, 이번에는 index.html에서 동작 로직을 지정했습니다.-->
-
-<html>
-<body>
-  <h1>Hello World!</h1>
-  <h3>Gunhee Lee</h3>
-</body>
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>스마트시티 융합기술세미나</title>
 
   <style>
-    h1, h3 { color: black; cursor: pointer; }
+    body {
+      margin: 0;
+      padding: 48px 20px;
+      background: #f7f9fc;
+      color: #1c2536;
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    }
+
+    .wrap {
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      color: #DC052D;
+    }
+
+    .sub {
+      margin: 0 0 32px;
+      font-size: 16px;
+      color: #5a6577;
+    }
+
+    .panel {
+      background: #ffffff;
+      border: 1px solid #e2e8f2;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px 20px;
+      border-bottom: 1px solid #eef1f7;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .item:last-child {
+      border-bottom: none;
+    }
+
+    .item:hover {
+      background: #FDEEF1;
+    }
+
+    .week {
+      flex-shrink: 0;
+      padding: 5px 12px;
+      border-radius: 5px;
+      background: #DC052D;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .body {
+      min-width: 0;
+    }
+
+    .name {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .desc {
+      display: block;
+      margin-top: 3px;
+      font-size: 13px;
+      color: #8b95a7;
+    }
+
+    .arrow {
+      margin-left: auto;
+      flex-shrink: 0;
+      color: #DC052D;
+      font-size: 18px;
+    }
+
   </style>
+</head>
 
-  <script>
-    document.querySelector('h1').addEventListener('click', function () {
-      this.style.color = 'red';
-    });
+<body>
+  <div class="wrap">
+    <h1>스마트시티 융합기술세미나</h1>
+    <p class="sub">과제 제출 리스트</p>
 
-    document.querySelector('h3').addEventListener('click', function () {
-      this.style.color = 'blue';
-    });
-  </script>
-
+    <div class="panel">
+      <a class="item" href="/worldclock_week2">
+        <span class="week">2주차</span>
+        <span class="body">
+          <span class="name">세계 시차 계산기</span>
+          <span class="desc">함수와 반복문으로 24개 시간대의 현지 시각 구하기</span>
+        </span>
+        <span class="arrow">&rsaquo;</span>
+      </a>
+    </div>
+  </div>
+</body>
 </html>
