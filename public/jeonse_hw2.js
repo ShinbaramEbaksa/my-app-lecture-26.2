@@ -67,7 +67,11 @@ function drawDistricts(geo) {
     style: styleFor,
     onEachFeature: (feature, layer) => {
       const name = feature.properties.sggnm;
-      layer.bindTooltip(name, { permanent: false, direction: "center" });
+      // 상시 라벨. 손대서 뜨는 툴팁은 쓰지 않는다.
+      layer.bindTooltip(name, {
+        permanent: true, direction: "center", className: "gu-label",
+        interactive: false, opacity: 1,
+      });
       layer.on("click", () => setGu(name));
     },
   }).addTo(map);
@@ -76,7 +80,9 @@ function drawDistricts(geo) {
     const opacity = fillOpacityFor(map.getZoom());
     guLayer.setStyle({ fillOpacity: opacity });
     highlight();
+    thinLabels();
   });
+  map.on("moveend", thinLabels);
 }
 
 // 피드는 남이 쓴 글이다. DOM 에 넣기 전에 반드시 막는다.
@@ -118,6 +124,30 @@ function focusOn(gu, dong) {
   }
   const bounds = boundsOf(gu);
   if (bounds) map.fitBounds(bounds, { padding: [40, 40] });
+}
+
+// 25개 이름이 한 화면에 다 들어가지는 않는다. 넓은 구가 이름을 가져가고,
+// 그 자리를 침범하는 작은 구의 이름은 접는다.
+function thinLabels() {
+  const entries = [];
+  guLayer.eachLayer((layer) => {
+    const node = layer.getTooltip()?.getElement();
+    if (!node) return;
+    node.style.display = "";
+    entries.push({ node, area: layer.getBounds().getNorth() - layer.getBounds().getSouth() });
+  });
+  entries.sort((a, b) => b.area - a.area);
+
+  const kept = [];
+  const pad = 2;
+  for (const { node } of entries) {
+    const r = node.getBoundingClientRect();
+    if (!r.width) continue;
+    const clash = kept.some((k) => !(r.right + pad <= k.left || r.left >= k.right + pad
+      || r.bottom + pad <= k.top || r.top >= k.bottom + pad));
+    if (clash) node.style.display = "none";
+    else kept.push(r);
+  }
 }
 
 function highlight() {
@@ -241,6 +271,7 @@ async function start() {
   data = payload;
   buildMap();
   drawDistricts(geo);
+  thinLabels();
   drawLegend();
   fillSelect("gu", Object.keys(data.cells).sort(), "선택");
   fillSelect("dong", [], "자치구 먼저");

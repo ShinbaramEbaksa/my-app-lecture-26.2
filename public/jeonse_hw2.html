@@ -68,6 +68,14 @@
     #legend .steps { display: flex; gap: 2px; }
     #legend .steps span { width: 24px; height: 9px; border-radius: 2px; }
 
+.leaflet-tooltip.gu-label {
+      background: none; border: none; box-shadow: none; padding: 0;
+      font-family: inherit; font-size: 10.5px; font-weight: 600;
+      color: #35353a; white-space: nowrap; pointer-events: none;
+      text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+    }
+    .leaflet-tooltip.gu-label::before { display: none; }
+
     .leaflet-control-attribution { font-family: inherit; font-size: 10px; }
 
     /* 팝업은 지도 오른쪽을 덮는다. 전환 버튼과 저작자 표시를 그 왼쪽으로 비켜 놓는다. */

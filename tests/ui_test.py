@@ -220,3 +220,43 @@ def test_dong_ranking_uses_one_scale(page, base_url):
     climbs = [(i, widths[i - 1], widths[i]) for i in range(1, len(widths))
               if widths[i] > widths[i - 1] + 0.5]
     assert climbs == [], f"더 싼 동의 막대가 더 길다: {climbs}"
+
+
+def _label_boxes(page):
+    return page.evaluate("""() => [...document.querySelectorAll('.gu-label')]
+        .filter(n => n.offsetParent !== null || n.getClientRects().length)
+        .map(n => { const r = n.getBoundingClientRect();
+                    return {t: n.textContent.trim(), l: r.left, r: r.right,
+                            top: r.top, b: r.bottom, w: r.width}; })
+        .filter(b => b.w > 0)""")
+
+
+def test_district_labels_are_always_visible(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.wait_for_timeout(900)
+    boxes = _label_boxes(page)
+    assert len(boxes) >= 18, f"기본 화면에 보이는 라벨이 너무 적다: {len(boxes)}"
+    assert "강남구" in [b["t"] for b in boxes]
+
+
+def test_district_labels_do_not_overlap(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.wait_for_timeout(900)
+    boxes = _label_boxes(page)
+    clashes = []
+    for i, a in enumerate(boxes):
+        for b in boxes[i + 1:]:
+            if not (a["r"] <= b["l"] or a["l"] >= b["r"]
+                    or a["b"] <= b["top"] or a["top"] >= b["b"]):
+                clashes.append((a["t"], b["t"]))
+    assert clashes == [], f"라벨이 겹친다: {clashes}"
+
+
+def test_no_hover_tooltip_on_districts(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.wait_for_timeout(600)
+    before = page.eval_on_selector_all(".leaflet-tooltip", "n => n.length")
+    page.mouse.move(700, 450)
+    page.wait_for_timeout(600)
+    after = page.eval_on_selector_all(".leaflet-tooltip", "n => n.length")
+    assert after == before, "손대면 새 툴팁이 뜬다"
