@@ -94,3 +94,35 @@ def test_news_failure_shows_official_links(page, base_url):
     page.click("#tab-news")
     page.wait_for_timeout(1500)
     assert page.eval_on_selector_all("#news-sources a", "n => n.length") >= 3
+
+
+def test_korean_font_applied(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    fam = page.eval_on_selector("body", "n => getComputedStyle(n).fontFamily")
+    assert "Noto Sans KR" in fam
+
+
+def test_no_overflow_or_overlap_on_mobile(page, base_url):
+    page.set_viewport_size({"width": 390, "height": 844})
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.evaluate("() => window.app.setGu('강동구')")
+    page.wait_for_timeout(900)
+    assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth")
+    boxes = page.evaluate("""() => ['#panel', '#popup', '#basemap'].map(s => {
+        const e = document.querySelector(s); const r = e.getBoundingClientRect();
+        return [s, r.left >= -1, r.right <= window.innerWidth + 1]; })""")
+    assert all(b[1] and b[2] for b in boxes)
+
+
+def test_fill_fades_when_zoomed_into_streets(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    wide = page.eval_on_selector("path.gu", "n => parseFloat(getComputedStyle(n).fillOpacity)")
+    page.evaluate("() => window.app.map.setZoom(15)")
+    page.wait_for_timeout(700)
+    page.mouse.move(700, 450)
+    page.wait_for_timeout(250)
+    close = page.evaluate("""() => {
+        const n = document.elementsFromPoint(700, 450).find(e => e.tagName === 'path');
+        return parseFloat(getComputedStyle(n).fillOpacity); }""")
+    assert wide >= 0.5, "시 전체에서는 색이 또렷해야 한다"
+    assert close <= 0.25, "거리 수준에서는 타일이 비쳐야 한다"

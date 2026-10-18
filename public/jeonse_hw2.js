@@ -13,11 +13,18 @@ function colorFor(mean) {
   return RAMP[step];
 }
 
+// 시 전체를 볼 때는 색이 주인공이지만, 거리까지 당기면 배경지도가 주인공이다.
+function fillOpacityFor(zoom) {
+  if (zoom <= 12) return 0.62;
+  if (zoom >= 15) return 0.12;
+  return 0.62 - (zoom - 12) * (0.5 / 3);
+}
+
 function styleFor(feature) {
   return {
     className: "gu",
     fillColor: colorFor(data.gu[feature.properties.sggnm][0]),
-    fillOpacity: 0.62,
+    fillOpacity: fillOpacityFor(map.getZoom()),
     color: "#ffffff",
     weight: 1.5,
   };
@@ -64,6 +71,12 @@ function drawDistricts(geo) {
       layer.on("click", () => setGu(name));
     },
   }).addTo(map);
+
+  map.on("zoomend", () => {
+    const opacity = fillOpacityFor(map.getZoom());
+    guLayer.setStyle({ fillOpacity: opacity });
+    highlight();
+  });
 }
 
 const USG_ORDER = ["아파트", "오피스텔", "연립다세대", "단독다가구"];

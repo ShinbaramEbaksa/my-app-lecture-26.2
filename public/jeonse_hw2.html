@@ -36,8 +36,8 @@
     }
 
     #map { position: fixed; inset: 0; z-index: 0; background: #eceef2; }
-    path.gu { cursor: pointer; transition: fill-opacity .15s ease; }
-    path.gu:hover { fill-opacity: .82; }
+    path.gu { cursor: pointer; transition: stroke-width .12s ease; }
+    path.gu:hover { stroke: #1c1c1e; stroke-width: 2.5; }
     path.gu.sel { stroke: #1c1c1e; stroke-width: 3; }
 
     .glass {
@@ -194,6 +194,20 @@
     .foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule);
             font-size: 10.5px; color: var(--ink-4); line-height: 1.7; }
 
+
+    /* 좁은 화면: 패널은 위, 결과는 아래 시트, 지도 전환은 시트 위로 */
+    @media (max-width: 820px) {
+      #panel { top: 10px; left: 10px; right: 10px; width: auto; }
+      .results, #news-list { max-height: 184px; }
+      #legend { left: 10px; bottom: 14px; }
+      #basemap { right: 10px; bottom: 14px; }
+      #popup {
+        top: auto; left: 0; right: 0; bottom: 0; width: auto;
+        max-height: 66vh; border-radius: 18px 18px 0 0;
+      }
+      body:has(#popup:not([hidden])) #legend,
+      body:has(#popup:not([hidden])) #basemap { bottom: calc(66vh + 14px); }
+    }
   </style>
 </head>
 
