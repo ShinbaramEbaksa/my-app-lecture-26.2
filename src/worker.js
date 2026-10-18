@@ -28,6 +28,11 @@ function parseItems(xml) {
   })).filter((item) => item.title && item.link);
 }
 
+// 물러날 때는 왜 물러났는지 남긴다. 화면은 쓰지 않지만 점검할 때 이것만이 단서다.
+function fallback(reason, maxAge) {
+  return json({ items: [], fallback: true, reason }, maxAge);
+}
+
 function json(body, maxAge) {
   return new Response(JSON.stringify(body), {
     headers: {
@@ -47,12 +52,13 @@ export default {
         headers: { "user-agent": "Mozilla/5.0 (compatible; jeonse-map/1.0)" },
         cf: { cacheTtl: 1800, cacheEverything: true },
       });
-      if (!upstream.ok) return json({ items: [], fallback: true }, 300);
-      const items = parseItems(await upstream.text());
-      if (!items.length) return json({ items: [], fallback: true }, 300);
+      if (!upstream.ok) return fallback(`upstream ${upstream.status}`, 300);
+      const body = await upstream.text();
+      const items = parseItems(body);
+      if (!items.length) return fallback(`no items in ${body.length} bytes`, 300);
       return json({ items, fallback: false }, 1800);
-    } catch {
-      return json({ items: [], fallback: true }, 300);
+    } catch (err) {
+      return fallback(String(err && err.message || err).slice(0, 120), 300);
     }
   },
 };
