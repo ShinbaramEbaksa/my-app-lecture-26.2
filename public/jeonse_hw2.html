@@ -2,186 +2,218 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>서울 전세가 대시보드</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>서울 전세가 지도</title>
 
   <link rel="stylesheet" href="https://pyscript.net/releases/2025.8.1/core.css">
   <script type="module" src="https://pyscript.net/releases/2025.8.1/core.js"></script>
 
   <style>
     :root {
-      --accent: #FF9500;        /* UI 강조 (데이터 마크 아님) */
-      --mark: #C2660A;          /* 데이터 마크 - 선택 */
-      --mark-off: #8E8E93;      /* 데이터 마크 - 비선택 */
+      --accent: #C2660A;
       --ink: #1c1c1e;
       --ink-2: #48484a;
       --ink-3: #6b6b70;
-      --ink-4: rgba(60, 60, 67, 0.42);
-      --glass: rgba(255, 255, 255, 0.55);
-      --glass-strong: rgba(255, 255, 255, 0.78);
-      --edge: rgba(255, 255, 255, 0.85);
-      --rule: rgba(60, 60, 67, 0.1);
+      --ink-4: rgba(60,60,67,.45);
+      --glass: rgba(255,255,255,.72);
+      --edge: rgba(255,255,255,.9);
+      --rule: rgba(60,60,67,.1);
+      --shadow: 0 10px 40px rgba(31,38,60,.18);
     }
 
     * { box-sizing: border-box; }
 
+    html, body { height: 100%; }
     body {
       margin: 0;
-      min-height: 100vh;
-      padding: 44px 18px 72px;
+      overflow: hidden;
       color: var(--ink);
-      background: #f2f1f6;
+      background: #eceef2;
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text",
                    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
       -webkit-font-smoothing: antialiased;
-      position: relative;
-      overflow-x: hidden;
     }
 
-    .blob { position: fixed; border-radius: 50%; filter: blur(80px); opacity: .5; pointer-events: none; z-index: 0; }
-    .blob.one   { width: 380px; height: 380px; background: #FFB340; top: -100px; left: -70px; }
-    .blob.two   { width: 320px; height: 320px; background: #FF7A5A; top: 220px; right: -100px; }
-    .blob.three { width: 420px; height: 420px; background: #7FC8FF; bottom: -160px; left: 18%; }
+    /* ── 배경 지도 ── */
+    #maplayer { position: fixed; inset: 0; z-index: 0; }
+    #maplayer svg { width: 100%; height: 100%; display: block; }
+    .gu { stroke: #ffffff; stroke-width: 1.5; cursor: pointer;
+          transition: fill .15s ease; }
+    .gu:hover { stroke: var(--ink-2); stroke-width: 2.5; }
+    .gu.sel { stroke: #1c1c1e; stroke-width: 3; }
+    .gu-label { fill: var(--ink-2); font-size: 11px; font-weight: 600; pointer-events: none;
+                paint-order: stroke; stroke: rgba(255,255,255,.85); stroke-width: 3px; }
 
-    .wrap { position: relative; z-index: 1; max-width: 500px; margin: 0 auto; }
-
-    header { padding: 0 6px 20px; }
-    h1 { margin: 0 0 6px; font-size: 29px; font-weight: 700; letter-spacing: -.4px; }
-    .sub { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.55; }
-
-    .card {
+    .glass {
       background: var(--glass);
-      backdrop-filter: blur(30px) saturate(180%);
-      -webkit-backdrop-filter: blur(30px) saturate(180%);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
       border: 1px solid var(--edge);
-      border-radius: 24px;
-      box-shadow: 0 8px 32px rgba(31,38,60,.12), inset 0 1px 0 rgba(255,255,255,.6);
-      margin-bottom: 16px;
+      box-shadow: var(--shadow);
     }
 
-    .picker-card { padding: 6px; }
-
-    .field {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; padding: 13px 15px; border-bottom: 1px solid var(--rule);
+    /* ── 좌측 검색 패널 ── */
+    #panel {
+      position: fixed; z-index: 3; top: 16px; left: 16px; width: 300px;
+      border-radius: 16px; overflow: hidden;
     }
+    .tabs { display: flex; gap: 4px; padding: 8px 8px 0; }
+    .tab {
+      flex: 1; padding: 8px 6px; border: none; border-radius: 9px;
+      background: transparent; color: var(--ink-3);
+      font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .tab.on { background: var(--accent); color: #fff; }
+    .pane { padding: 10px 12px 12px; }
+    .pane[hidden] { display: none; }
+
+    .searchbox { position: relative; }
+    .searchbox input {
+      width: 100%; padding: 10px 12px; font-size: 15px; font-family: inherit;
+      color: var(--ink); background: rgba(118,118,128,.12);
+      border: 1px solid transparent; border-radius: 10px;
+    }
+    .searchbox input:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .results { margin-top: 8px; max-height: 262px; overflow-y: auto; }
+    .result {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      padding: 9px 10px; border-radius: 9px; cursor: pointer; font-size: 14px;
+    }
+    .result:hover { background: rgba(194,102,10,.12); }
+    .result .r-sub { font-size: 11.5px; color: var(--ink-4); flex-shrink: 0; }
+    .result em { font-style: normal; color: var(--accent); font-weight: 700; }
+    .empty { padding: 14px 4px; font-size: 13px; color: var(--ink-4); text-align: center; }
+
+    .field { display: flex; align-items: center; justify-content: space-between;
+             gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--rule); }
     .field:last-child { border-bottom: none; }
-    .field label { flex-shrink: 0; font-size: 16px; font-weight: 500; }
-
-    .picker { position: relative; flex: 1; max-width: 62%; }
+    .field label { font-size: 14px; font-weight: 500; flex-shrink: 0; }
+    .picker { position: relative; flex: 1; max-width: 64%; }
     select {
       width: 100%; appearance: none; -webkit-appearance: none;
-      padding: 9px 32px 9px 13px; font-size: 16px; font-family: inherit;
+      padding: 8px 28px 8px 11px; font-size: 14px; font-family: inherit;
       color: var(--ink); background: rgba(118,118,128,.12);
-      border: none; border-radius: 10px; cursor: pointer;
-      text-align: right; direction: rtl;
+      border: none; border-radius: 9px; cursor: pointer; text-align: right; direction: rtl;
     }
     select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
     select:disabled { color: rgba(60,60,67,.3); cursor: not-allowed; }
-    .chev { position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
-            color: rgba(60,60,67,.45); font-size: 13px; pointer-events: none; }
+    .chev { position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            color: rgba(60,60,67,.45); font-size: 12px; pointer-events: none; }
 
-    /* ── 보드 공통 ── */
-    .board { padding: 18px 20px 20px; }
-    .board-head { margin-bottom: 14px; }
-    .board-title { font-size: 13px; font-weight: 600; color: var(--ink-2); letter-spacing: -.1px; }
-    .board-note { display: block; margin-top: 3px; font-size: 12px; color: var(--ink-4); }
-
-    /* ── 보드1 요약 ── */
-    .summary { background: var(--glass-strong); text-align: center; padding: 26px 22px 22px; }
-    .place { font-size: 14px; color: var(--ink-3); margin-bottom: 9px; }
-    .price { font-size: 37px; font-weight: 700; letter-spacing: -1px; color: var(--mark); line-height: 1.12; }
-    .price-cap { display: block; margin-top: 7px; font-size: 13px; color: var(--ink-3); }
-    .chips { margin-top: 15px; display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
-    .chip {
-      padding: 5px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 500;
-      background: rgba(255,149,0,.16); color: #9A5200;
+    /* ── 범례 ── */
+    #legend {
+      position: fixed; z-index: 2; left: 16px; bottom: 16px;
+      padding: 9px 12px; border-radius: 12px; font-size: 11px; color: var(--ink-3);
+      display: flex; align-items: center; gap: 7px;
     }
+    #legend .steps { display: flex; gap: 2px; }
+    #legend .steps span { width: 26px; height: 9px; border-radius: 2px; }
+
+    /* ── 결과 팝업 ── */
+    #popup {
+      position: fixed; z-index: 4; top: 16px; right: 16px; bottom: 16px; width: 396px;
+      border-radius: 18px; display: flex; flex-direction: column; overflow: hidden;
+    }
+    #popup[hidden] { display: none; }
+    .pop-head {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 15px 16px 12px; border-bottom: 1px solid var(--rule);
+    }
+    .pop-title { flex: 1; min-width: 0; }
+    .pop-title b { display: block; font-size: 17px; letter-spacing: -.3px; }
+    .pop-title span { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-3); }
+    .close {
+      flex-shrink: 0; width: 28px; height: 28px; border: none; border-radius: 50%;
+      background: rgba(118,118,128,.16); color: var(--ink-2);
+      font-size: 15px; line-height: 1; cursor: pointer; font-family: inherit;
+    }
+    .close:hover { background: rgba(118,118,128,.28); }
+    .pop-body { flex: 1; overflow-y: auto; padding: 14px 16px 18px; }
+
+    .sec { margin-bottom: 20px; }
+    .sec:last-child { margin-bottom: 4px; }
+    .sec-t { font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 9px; }
+    .sec-t span { display: block; margin-top: 2px; font-size: 11.5px;
+                  font-weight: 400; color: var(--ink-4); }
+
+    .price { font-size: 33px; font-weight: 700; letter-spacing: -1px;
+             color: var(--accent); line-height: 1.1; }
+    .price-cap { display: block; margin-top: 5px; font-size: 12px; color: var(--ink-3); }
+    .chips { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 500;
+            background: rgba(194,102,10,.14); color: #8E4C06; }
     .chip.neutral { background: rgba(118,118,128,.14); color: var(--ink-2); }
     .chip.warn { background: rgba(255,59,48,.12); color: #A01B13; }
-
-    .trim {
-      margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule);
-      display: flex; justify-content: space-around; gap: 10px;
-    }
+    .trim { margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--rule);
+            display: flex; gap: 10px; }
     .trim div { flex: 1; }
-    .trim .k { font-size: 11.5px; color: var(--ink-4); }
-    .trim .v { margin-top: 3px; font-size: 15px; font-weight: 600; color: var(--ink); }
-    .trim .v.off { color: var(--ink-4); font-weight: 500; font-size: 13px; }
+    .trim .k { font-size: 11px; color: var(--ink-4); }
+    .trim .v { margin-top: 2px; font-size: 14.5px; font-weight: 600; }
+    .trim .v.off { color: var(--ink-4); font-weight: 500; font-size: 12.5px; }
 
-    /* ── 막대 ── */
     .bars { display: flex; flex-direction: column; gap: 2px; }
-    .bars.scroll { max-height: 304px; overflow-y: auto; padding-right: 4px; }
-    .bar-row { display: flex; align-items: center; gap: 9px; height: 24px; }
-    .bar-name { width: 62px; flex-shrink: 0; font-size: 12px; color: var(--ink-2);
+    .bars.scroll { max-height: 268px; overflow-y: auto; padding-right: 4px; position: relative; }
+    .bar-row { display: flex; align-items: center; gap: 8px; height: 24px; flex-shrink: 0; }
+    .bar-name { width: 58px; flex-shrink: 0; font-size: 11.5px; color: var(--ink-2);
                 text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bar-row.sel .bar-name { font-weight: 700; color: var(--ink); }
     .bar-track { flex: 1; min-width: 0; }
-    .bar-fill { display: block; height: 11px; border-radius: 0 4px 4px 0; background: var(--mark-off); }
-    .bar-row.sel .bar-fill { background: var(--mark); }
-    .bar-val { width: 78px; flex-shrink: 0; font-size: 11.5px; color: var(--ink-3);
-               text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bar-fill { display: block; height: 11px; border-radius: 0 4px 4px 0; background: #8E8E93; }
+    .bar-row.sel .bar-fill { background: var(--accent); }
+    .bar-val { width: 54px; flex-shrink: 0; font-size: 11px; color: var(--ink-3);
+               text-align: right; font-variant-numeric: tabular-nums; }
     .bar-row.sel .bar-val { color: var(--ink); font-weight: 600; }
 
-    /* ── 지도 ── */
-    .map { width: 100%; height: auto; display: block; }
-    .gu { stroke: #ffffff; stroke-width: 2; cursor: pointer; }
-    .gu:hover { stroke: var(--ink-2); stroke-width: 2.5; }
-    .gu.sel { stroke: #1c1c1e; stroke-width: 3; }
-    .legend { display: flex; align-items: center; gap: 7px; margin-top: 12px;
-              font-size: 11px; color: var(--ink-4); }
-    .legend .steps { display: flex; flex: 1; gap: 2px; }
-    .legend .steps span { flex: 1; height: 9px; border-radius: 2px; }
-
-    /* ── 추이 ── */
     .chart { width: 100%; height: auto; display: block; overflow: visible; }
     .grid-line { stroke: rgba(60,60,67,.12); stroke-width: 1; }
     .axis-text { fill: var(--ink-4); font-size: 9px;
                  font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     .pt-label { fill: var(--ink-2); font-size: 9.5px; font-weight: 600;
                 font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-    .hit { fill: transparent; cursor: crosshair; }
 
-    .hint { padding: 32px 10px; text-align: center; color: var(--ink-3); font-size: 15px; line-height: 1.6; }
-
-    .tablelink {
-      margin-top: 12px; text-align: center; font-size: 12px;
-    }
-    .tablelink button {
-      border: none; background: rgba(118,118,128,.14); color: var(--ink-2);
-      padding: 6px 14px; border-radius: 999px; font-size: 12px;
-      font-family: inherit; cursor: pointer;
-    }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
-    th, td { padding: 6px 4px; border-bottom: 1px solid var(--rule); text-align: right; }
+    .tablelink { margin-top: 10px; text-align: center; }
+    .tablelink button { border: none; background: rgba(118,118,128,.14); color: var(--ink-2);
+                        padding: 5px 13px; border-radius: 999px; font-size: 11.5px;
+                        font-family: inherit; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11.5px; }
+    th, td { padding: 5px 4px; border-bottom: 1px solid var(--rule); text-align: right; }
     th:first-child, td:first-child { text-align: left; }
     th { color: var(--ink-4); font-weight: 500; }
     td { font-variant-numeric: tabular-nums; }
 
-    footer { margin-top: 24px; text-align: center; font-size: 11.5px;
-             color: rgba(60,60,67,.45); line-height: 1.75; }
+    .foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule);
+            font-size: 10.5px; color: var(--ink-4); line-height: 1.7; }
 
-    @media (max-width: 380px) {
-      h1 { font-size: 25px; }
-      .price { font-size: 31px; }
-      .bar-name { width: 54px; }
-      .bar-val { width: 68px; font-size: 11px; }
+    /* ── 좁은 화면: 팝업을 아래 시트로 ── */
+    @media (max-width: 820px) {
+      #panel { top: 10px; left: 10px; right: 10px; width: auto; }
+      #legend { bottom: 10px; left: 10px; }
+      #popup {
+        top: auto; left: 0; right: 0; bottom: 0; width: auto;
+        max-height: 68vh; border-radius: 18px 18px 0 0;
+      }
+      .results { max-height: 200px; }
     }
   </style>
 </head>
 
 <body>
-  <div class="blob one"></div>
-  <div class="blob two"></div>
-  <div class="blob three"></div>
+  <div id="maplayer"></div>
 
-  <div class="wrap">
-    <header>
-      <h1>서울 전세가 대시보드</h1>
-      <p class="sub">자치구와 법정동, 주택 유형을 고르면<br>평균 전세 보증금을 서울 전체와 견줘 보여 줍니다.</p>
-    </header>
+  <div id="panel" class="glass">
+    <div class="tabs">
+      <button class="tab on" id="tab-search" data-action="tab" data-tab="search">검색</button>
+      <button class="tab" id="tab-pick" data-action="tab" data-tab="pick">지명검색</button>
+    </div>
 
-    <div class="card picker-card">
+    <div class="pane" id="pane-search">
+      <div class="searchbox">
+        <input id="q" type="text" placeholder="동 이름을 입력하세요. 예: 가락" autocomplete="off" py-input="on_query">
+      </div>
+      <div class="results" id="results"></div>
+    </div>
+
+    <div class="pane" id="pane-pick" hidden>
       <div class="field">
         <label for="gu">자치구</label>
         <span class="picker"><select id="gu" py-change="on_gu"></select><span class="chev">&#9662;</span></span>
@@ -195,24 +227,25 @@
         <span class="picker"><select id="usg" py-change="on_usg" disabled></select><span class="chev">&#9662;</span></span>
       </div>
     </div>
+  </div>
 
-    <div class="card summary" id="board1"><div class="hint">불러오는 중입니다.</div></div>
-    <div class="card board" id="board3" hidden></div>
-    <div class="card board" id="board5" hidden></div>
-    <div class="card board" id="board2" hidden></div>
-    <div class="card board" id="board4" hidden></div>
+  <div id="legend" class="glass">
+    <span>전세가 낮음</span>
+    <span class="steps" id="legend-steps"></span>
+    <span>높음</span>
+  </div>
 
-    <footer>
-      출처: 서울 열린데이터 광장 · 서울시 부동산 전월세가 정보<br>
-      2025년 11월 ~ 2026년 8월 확정신고 전세 계약 121,659건 기준
-    </footer>
+  <div id="popup" class="glass" hidden>
+    <div class="pop-head">
+      <div class="pop-title"><b id="pop-name"></b><span id="pop-sub"></span></div>
+      <button class="close" data-action="close" aria-label="닫기">&#10005;</button>
+    </div>
+    <div class="pop-body" id="pop-body"></div>
   </div>
 
   <script type="py">
 from pyscript import document
-from pyscript.ffi import create_proxy
 
-# 자치구 > 법정동 > 유형 > [평균, 건수, 절사평균(10%) 또는 None]
 DATA = {'강남구': {'개포동': {'단독다가구': [21896.0, 38, 20842.0],
                  '아파트': [90113.0, 776, 85879.0],
                  '연립다세대': [33880.0, 254, 33385.0],
@@ -1253,8 +1286,6 @@ DATA = {'강남구': {'개포동': {'단독다가구': [21896.0, 38, 20842.0],
                  '아파트': [45233.0, 83, 44299.0],
                  '연립다세대': [22349.0, 232, 22300.0],
                  '오피스텔': [13083.0, 6, None]}}}
-
-# 자치구 > [평균, 건수, 절사평균]
 GU = {'강남구': [73383.0, 8104, 65664.0],
  '강동구': [45522.0, 6722, 43708.0],
  '강북구': [25174.0, 1984, 23038.0],
@@ -1280,8 +1311,6 @@ GU = {'강남구': [73383.0, 8104, 65664.0],
  '종로구': [40363.0, 1313, 34579.0],
  '중구': [44047.0, 1893, 41193.0],
  '중랑구': [27926.0, 4086, 26232.0]}
-
-# 자치구 > 월별 평균 (MONTH_LABELS 순서)
 MONTHLY = {'강남구': [76069.0, 74180.0, 67564.0, 70875.0, 70661.0, 76542.0, 72384.0],
  '강동구': [47127.0, 47510.0, 44087.0, 43096.0, 45381.0, 44655.0, 46730.0],
  '강북구': [25747.0, 26189.0, 23754.0, 26109.0, 24036.0, 25102.0, 25241.0],
@@ -1308,11 +1337,7 @@ MONTHLY = {'강남구': [76069.0, 74180.0, 67564.0, 70875.0, 70661.0, 76542.0, 7
  '중구': [47190.0, 44726.0, 43636.0, 40724.0, 44019.0, 41733.0, 44150.0],
  '중랑구': [29431.0, 26503.0, 24734.0, 27875.0, 28929.0, 28456.0, 30084.0]}
 MONTH_LABELS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월']
-
-# 서울 전체 [평균, 건수, 절사평균]
 SEOUL = [44728.0, 121659, 39428.0]
-
-# 자치구 경계 (SVG path) 와 그림 영역
 SHAPES = {'강남구': 'M697.3,700.4L680.2,694.2L683.7,691.2L669.3,673.7L660.5,648.8L642.4,650.2L612.8,572.1L610.4,572.8L612.7,571.7L603.8,538.8L590.1,521.5L613.3,498.4L658.0,497.3L721.7,529.8L720.5,542.3L728.9,591.0L742.0,601.7L792.7,617.9L814.1,631.2L824.9,644.9L829.8,654.9L826.9,656.7L854.1,708.2L841.5,720.3L840.5,730.0L832.5,722.6L815.6,718.2L808.9,726.9L796.3,729.4L788.6,714.8L767.6,694.6L763.5,687.0L765.1,679.8L762.0,679.3L746.0,680.6L738.2,687.1L735.2,681.2L728.3,681.3L711.1,687.1L708.9,698.8L697.3,700.4Z',
  '강동구': 'M907.3,546.9L908.0,554.4L846.3,520.8L855.9,489.3L823.4,474.4L833.7,444.8L832.7,423.9L840.4,424.6L852.4,412.6L881.3,399.2L918.1,399.1L959.6,367.7L986.0,361.9L980.4,372.6L996.2,421.8L994.8,446.2L1000.0,467.4L951.4,469.8L928.4,503.0L927.7,517.0L907.3,546.9Z',
  '강북구': 'M614.9,270.3L582.1,248.3L580.6,232.2L559.2,223.3L545.5,207.8L525.1,194.1L529.2,181.8L521.8,172.8L525.1,161.3L512.7,136.1L526.0,125.6L533.2,113.5L547.8,104.6L542.1,64.9L557.0,51.8L581.6,49.2L581.9,59.4L590.4,65.4L606.0,93.6L598.7,105.0L600.8,118.8L594.7,128.1L593.4,152.3L620.6,161.5L639.8,178.9L644.6,191.0L681.1,230.6L666.7,248.0L655.2,255.1L650.4,265.9L634.4,276.7L633.4,267.1L614.9,270.3Z',
@@ -1338,15 +1363,42 @@ SHAPES = {'강남구': 'M697.3,700.4L680.2,694.2L683.7,691.2L669.3,673.7L660.5,6
  '종로구': 'M483.7,405.2L450.9,367.8L455.4,367.5L459.1,359.7L467.9,362.0L458.9,348.1L459.4,309.1L450.8,306.9L450.5,288.1L443.3,280.5L443.2,248.9L447.6,229.5L458.5,227.8L465.2,218.4L488.4,213.2L494.4,207.0L502.3,209.7L506.1,217.4L515.2,216.7L512.1,230.2L520.7,253.9L530.9,263.4L528.1,282.7L532.5,300.6L517.8,306.8L518.8,316.7L535.8,330.4L564.0,327.1L567.4,336.9L577.4,346.0L582.9,363.1L596.8,357.7L601.9,359.8L606.6,371.9L617.1,370.3L617.6,389.3L600.0,395.1L535.3,400.3L500.5,396.8L483.7,405.2Z',
  '중구': 'M571.1,454.2L558.3,455.0L550.6,463.1L527.0,443.5L513.6,444.5L506.7,439.6L506.1,446.6L487.9,443.0L486.6,438.6L472.0,450.3L470.4,438.7L474.0,433.3L469.8,428.1L489.2,418.6L482.5,407.2L487.9,400.0L600.0,395.1L617.6,389.3L618.2,409.1L625.7,411.8L617.5,422.4L616.4,431.1L604.5,435.0L582.3,472.9L573.3,466.3L575.9,460.2L571.1,454.2Z',
  '중랑구': 'M802.7,383.8L778.4,395.8L749.4,389.0L746.2,361.5L732.8,340.5L728.0,319.6L735.4,297.4L732.3,257.2L766.5,243.5L792.9,252.9L814.2,241.5L837.9,246.1L842.5,269.0L840.2,277.7L844.2,285.3L833.6,304.8L844.4,319.2L830.1,328.7L822.8,350.4L799.9,355.3L807.1,359.1L802.7,383.8Z'}
+CENTERS = {'강남구': [697.2, 609.8],
+ '강동구': [913.5, 456.8],
+ '강북구': [575.1, 167.1],
+ '강서구': [129.2, 407.6],
+ '관악구': [444.6, 709.5],
+ '광진구': [777.9, 455.0],
+ '구로구': [181.6, 621.3],
+ '금천구': [322.6, 728.6],
+ '노원구': [731.8, 137.4],
+ '도봉구': [641.3, 111.9],
+ '동대문구': [687.6, 348.4],
+ '동작구': [442.8, 613.5],
+ '마포구': [319.6, 419.6],
+ '서대문구': [404.0, 357.7],
+ '서초구': [591.9, 662.4],
+ '성동구': [659.9, 453.1],
+ '성북구': [627.1, 279.7],
+ '송파구': [818.8, 593.3],
+ '양천구': [215.2, 527.4],
+ '영등포구': [358.4, 540.5],
+ '용산구': [517.2, 514.2],
+ '은평구': [386.3, 257.8],
+ '종로구': [487.9, 303.7],
+ '중구': [543.1, 432.2],
+ '중랑구': [784.8, 312.0]}
 VIEWBOX = [1000, 820]
+PERIOD = "2025년 11월 ~ 2026년 8월"
+TOTAL = "121,659"
 
-# 단계구분도 색 (연함 → 진함)
 RAMP = ["#FCE9CE", "#F8CE97", "#EFAC60", "#D9872F", "#A85F0D"]
-
 USG_ORDER = ["아파트", "오피스텔", "연립다세대", "단독다가구"]
 
+state = {"gu": "", "dong": "", "usg": ""}
 
-# ── 값 다루기 ──────────────────────────────────────────────
+
+# ── 값 ────────────────────────────────────────────────────
 
 def format_money(value):
     total = int(round(value))
@@ -1363,7 +1415,6 @@ def format_money(value):
 
 
 def short_money(value):
-    """막대 옆에 들어갈 짧은 표기"""
     eok = value / 10000
     if eok >= 10:
         text = f"{eok:.0f}억"
@@ -1375,7 +1426,6 @@ def short_money(value):
 
 
 def order_usg(keys):
-    """아파트 → 오피스텔 → 연립다세대 → 단독다가구 순서로"""
     out = []
     for name in USG_ORDER:
         if name in keys:
@@ -1386,10 +1436,61 @@ def order_usg(keys):
     return out
 
 
-# ── 그리기 조각 ────────────────────────────────────────────
+def ramp_step(value, cuts):
+    step = 0
+    for i in range(len(cuts)):
+        if value > cuts[i]:
+            step = i + 1
+    return step
+
+
+def gu_cuts():
+    values = sorted(GU[k][0] for k in GU)
+    cuts = []
+    for i in range(1, len(RAMP)):
+        cuts.append(values[int(len(values) * i / len(RAMP))])
+    return cuts
+
+
+# ── 지도 ──────────────────────────────────────────────────
+
+def draw_map():
+    cuts = gu_cuts()
+    names = sorted(SHAPES.keys())
+    svg = f"<svg viewBox='0 0 {VIEWBOX[0]} {VIEWBOX[1]}' preserveAspectRatio='xMidYMid meet'"
+    svg = svg + " role='img' aria-label='서울 자치구 평균 전세가 지도'>"
+    for i in range(len(names)):
+        name = names[i]
+        color = RAMP[ramp_step(GU[name][0], cuts)]
+        svg = svg + f"<path id='gu-{i}' class='gu' d='{SHAPES[name]}' fill='{color}'"
+        svg = svg + f" data-action='pick-gu' data-gu='{name}'>"
+        svg = svg + f"<title>{name} · {format_money(GU[name][0])}</title></path>"
+    for i in range(len(names)):
+        name = names[i]
+        point = CENTERS[name]
+        svg = svg + f"<text class='gu-label' x='{point[0]}' y='{point[1]}' text-anchor='middle'>{name}</text>"
+    svg = svg + "</svg>"
+    document.querySelector("#maplayer").innerHTML = svg
+
+    steps = ""
+    for i in range(len(RAMP)):
+        steps = steps + f"<span style='background:{RAMP[i]}'></span>"
+    document.querySelector("#legend-steps").innerHTML = steps
+
+
+def highlight(gu):
+    names = sorted(SHAPES.keys())
+    for i in range(len(names)):
+        node = document.querySelector("#gu-" + str(i))
+        if names[i] == gu:
+            node.setAttribute("class", "gu sel")
+        else:
+            node.setAttribute("class", "gu")
+
+
+# ── 조각 ──────────────────────────────────────────────────
 
 def bar_list(rows, selected, scroll):
-    """rows: [이름, 값] 목록. 가장 큰 값을 100%로"""
     top = 0
     for i in range(len(rows)):
         if rows[i][1] > top:
@@ -1401,57 +1502,47 @@ def bar_list(rows, selected, scroll):
         value = rows[i][1]
         width = 2 + 98 * value / top
         row_cls = "bar-row sel" if name == selected else "bar-row"
-        html = html + f"<div class='{row_cls}'>"
-        html = html + f"<span class='bar-name' title='{name}'>{name}</span>"
+        html = html + f"<div class='{row_cls}'><span class='bar-name' title='{name}'>{name}</span>"
         html = html + f"<span class='bar-track'><span class='bar-fill' style='width:{width:.1f}%'></span></span>"
-        html = html + f"<span class='bar-val'>{short_money(value)}</span>"
-        html = html + "</div>"
+        html = html + f"<span class='bar-val'>{short_money(value)}</span></div>"
     return html + "</div>"
 
 
 def line_chart(values, labels):
-    """월별 추이 꺾은선. 점마다 title로 값을 보여 준다"""
-    w = 460
-    h = 150
-    pad_l = 8
-    pad_r = 8
+    w = 360
+    h = 132
+    pad_l = 10
+    pad_r = 10
     pad_t = 22
     pad_b = 10
-
     low = min(values)
     high = max(values)
     span = high - low
     if span == 0:
         span = 1
-
+    n = len(values)
     xs = []
     ys = []
-    n = len(values)
     for i in range(n):
-        x = pad_l + (w - pad_l - pad_r) * i / (n - 1)
-        y = pad_t + (h - pad_t - pad_b) * (1 - (values[i] - low) / span)
-        xs.append(x)
-        ys.append(y)
+        xs.append(pad_l + (w - pad_l - pad_r) * i / (n - 1))
+        ys.append(pad_t + (h - pad_t - pad_b) * (1 - (values[i] - low) / span))
 
-    svg = f"<svg class='chart' viewBox='0 0 {w} {h + 16}' role='img' aria-label='월별 평균 전세가 추이'>"
-    svg = svg + f"<line class='grid-line' x1='{pad_l}' y1='{pad_t}' x2='{w - pad_r}' y2='{pad_t}'/>"
-    svg = svg + f"<line class='grid-line' x1='{pad_l}' y1='{h - pad_b}' x2='{w - pad_r}' y2='{h - pad_b}'/>"
-
+    svg = f"<svg class='chart' viewBox='0 0 {w} {h + 16}' role='img' aria-label='월별 평균 전세가'>"
+    svg = svg + f"<line class='grid-line' x1='{pad_l}' y1='{pad_t}' x2='{w-pad_r}' y2='{pad_t}'/>"
+    svg = svg + f"<line class='grid-line' x1='{pad_l}' y1='{h-pad_b}' x2='{w-pad_r}' y2='{h-pad_b}'/>"
     points = ""
     for i in range(n):
         points = points + f"{xs[i]:.1f},{ys[i]:.1f} "
     svg = svg + f"<polyline points='{points}' fill='none' stroke='#C2660A' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/>"
-
     for i in range(n):
-        svg = svg + f"<circle cx='{xs[i]:.1f}' cy='{ys[i]:.1f}' r='4' fill='#C2660A' stroke='#ffffff' stroke-width='2'>"
+        svg = svg + f"<circle cx='{xs[i]:.1f}' cy='{ys[i]:.1f}' r='4' fill='#C2660A' stroke='#fff' stroke-width='2'>"
         svg = svg + f"<title>{labels[i]} · {format_money(values[i])}</title></circle>"
         if i == 0 or i == n - 1 or values[i] == high or values[i] == low:
             anchor = "start" if i == 0 else ("end" if i == n - 1 else "middle")
-            svg = svg + f"<text class='pt-label' x='{xs[i]:.1f}' y='{ys[i] - 10:.1f}' text-anchor='{anchor}'>{short_money(values[i])}</text>"
+            svg = svg + f"<text class='pt-label' x='{xs[i]:.1f}' y='{ys[i]-10:.1f}' text-anchor='{anchor}'>{short_money(values[i])}</text>"
         if i % 2 == 0 or i == n - 1:
             anchor = "start" if i == 0 else ("end" if i == n - 1 else "middle")
-            svg = svg + f"<text class='axis-text' x='{xs[i]:.1f}' y='{h + 8}' text-anchor='{anchor}'>{labels[i]}</text>"
-
+            svg = svg + f"<text class='axis-text' x='{xs[i]:.1f}' y='{h+8}' text-anchor='{anchor}'>{labels[i]}</text>"
     return svg + "</svg>"
 
 
@@ -1462,99 +1553,43 @@ def monthly_table(labels, values):
     return html + "</tbody></table>"
 
 
-# ── 보드 ──────────────────────────────────────────────────
+# ── 팝업 ──────────────────────────────────────────────────
 
-def board_summary(gu, dong, usg):
+def sec_summary(gu, dong, usg):
     row = DATA[gu][dong][usg]
     mean = row[0]
     count = row[1]
     trim = row[2]
-
-    html = f"<div class='place'>{gu} {dong} · {usg}</div>"
+    html = "<div class='sec'>"
     html = html + f"<div class='price'>{format_money(mean)}</div>"
-    html = html + "<span class='price-cap'>평균 전세 보증금</span>"
-
-    html = html + "<div class='chips'>"
+    html = html + "<span class='price-cap'>평균 전세 보증금</span><div class='chips'>"
     ratio = mean / SEOUL[0] * 100
-    if ratio >= 100:
-        html = html + f"<span class='chip'>서울 평균의 {ratio:.0f}%</span>"
-    else:
-        html = html + f"<span class='chip neutral'>서울 평균의 {ratio:.0f}%</span>"
+    html = html + f"<span class='chip'>서울 평균의 {ratio:.0f}%</span>"
     if count < 5:
         html = html + f"<span class='chip warn'>거래 {count}건 · 참고용</span>"
     else:
         html = html + f"<span class='chip neutral'>거래 {count:,}건</span>"
-    html = html + "</div>"
-
-    html = html + "<div class='trim'>"
+    html = html + "</div><div class='trim'>"
     html = html + f"<div><div class='k'>평균</div><div class='v'>{short_money(mean)}</div></div>"
     if trim is None:
         html = html + "<div><div class='k'>절사평균 10%</div><div class='v off'>거래 부족</div></div>"
     else:
         html = html + f"<div><div class='k'>절사평균 10%</div><div class='v'>{short_money(trim)}</div></div>"
     html = html + f"<div><div class='k'>서울 평균</div><div class='v'>{short_money(SEOUL[0])}</div></div>"
-    html = html + "</div>"
-
-    document.querySelector("#board1").innerHTML = html
+    return html + "</div></div>"
 
 
-def board_usg(gu, dong, usg):
+def sec_usg(gu, dong, usg):
     keys = order_usg(DATA[gu][dong].keys())
     rows = []
     for i in range(len(keys)):
         rows.append([keys[i], DATA[gu][dong][keys[i]][0]])
-    html = "<div class='board-head'><span class='board-title'>"
-    html = html + f"{dong} 주택 유형별 평균</span>"
-    html = html + f"<span class='board-note'>같은 동 안에서 유형끼리 견줘 봅니다</span></div>"
-    html = html + bar_list(rows, usg, False)
-    box = document.querySelector("#board3")
-    box.innerHTML = html
-    box.hidden = False
+    html = f"<div class='sec'><div class='sec-t'>{dong} 주택 유형별 평균"
+    html = html + "<span>같은 동 안에서 유형끼리 견줘 봅니다</span></div>"
+    return html + bar_list(rows, usg, False) + "</div>"
 
 
-def ramp_step(value, cuts):
-    """값이 몇 번째 구간에 드는지"""
-    step = 0
-    for i in range(len(cuts)):
-        if value > cuts[i]:
-            step = i + 1
-    return step
-
-
-def board_map(gu):
-    values = []
-    for name in GU:
-        values.append(GU[name][0])
-    values.sort()
-    # 5구간 경계 (5분위)
-    cuts = []
-    for i in range(1, len(RAMP)):
-        cuts.append(values[int(len(values) * i / len(RAMP))])
-
-    html = "<div class='board-head'><span class='board-title'>자치구 평균 전세가 지도</span>"
-    html = html + "<span class='board-note'>진할수록 비쌉니다. 구를 누르면 그 구로 바뀝니다</span></div>"
-    html = html + f"<svg class='map' viewBox='0 0 {VIEWBOX[0]} {VIEWBOX[1]}' role='img' aria-label='서울 자치구 평균 전세가 단계구분도'>"
-    names = sorted(SHAPES.keys())
-    for i in range(len(names)):
-        name = names[i]
-        color = RAMP[ramp_step(GU[name][0], cuts)]
-        cls = "gu sel" if name == gu else "gu"
-        html = html + f"<path class='{cls}' d='{SHAPES[name]}' fill='{color}'"
-        html = html + f" data-action='pick-gu' data-gu='{name}'>"
-        html = html + f"<title>{name} · {format_money(GU[name][0])}</title></path>"
-    html = html + "</svg>"
-
-    html = html + "<div class='legend'><span>낮음</span><span class='steps'>"
-    for i in range(len(RAMP)):
-        html = html + f"<span style='background:{RAMP[i]}'></span>"
-    html = html + "</span><span>높음</span></div>"
-
-    box = document.querySelector("#board5")
-    box.innerHTML = html
-    box.hidden = False
-
-
-def board_gu(gu):
+def sec_rank(gu):
     names = sorted(GU.keys(), key=lambda k: GU[k][0], reverse=True)
     rows = []
     rank = 0
@@ -1562,45 +1597,56 @@ def board_gu(gu):
         rows.append([names[i], GU[names[i]][0]])
         if names[i] == gu:
             rank = i + 1
-    html = "<div class='board-head'><span class='board-title'>자치구 평균 전세가 순위</span>"
-    html = html + f"<span class='board-note'>{gu}는 25개 자치구 가운데 {rank}위입니다</span></div>"
-    html = html + bar_list(rows, gu, True)
-    box = document.querySelector("#board2")
-    box.innerHTML = html
-    box.hidden = False
-    # 선택한 구가 스크롤 밖에 있으면 안 보이므로 가운데로 끌어온다 (한 줄 26px 고정)
-    scroller = document.querySelector("#board2 .bars")
-    scroller.scrollTop = (rank - 1) * 26 - scroller.clientHeight / 2 + 13
+    html = "<div class='sec'><div class='sec-t'>자치구 평균 전세가 순위"
+    html = html + f"<span>{gu}는 25개 자치구 가운데 {rank}위입니다</span></div>"
+    return html + bar_list(rows, gu, True) + "</div>", rank
 
 
-def board_monthly(gu):
+def sec_monthly(gu):
     values = MONTHLY[gu]
-    first = values[0]
-    last = values[-1]
-    change = (last - first) / first * 100
+    change = (values[-1] - values[0]) / values[0] * 100
     if change >= 0:
         move = f"처음 달보다 {change:.1f}% 높습니다"
     else:
         move = f"처음 달보다 {-change:.1f}% 낮습니다"
-
-    html = "<div class='board-head'><span class='board-title'>"
-    html = html + f"{gu} 월별 평균 전세가</span>"
-    html = html + f"<span class='board-note'>{move} · 집계가 온전한 {len(values)}개월만</span></div>"
+    html = f"<div class='sec'><div class='sec-t'>{gu} 월별 평균 전세가"
+    html = html + f"<span>{move} · 집계가 온전한 {len(values)}개월만</span></div>"
     html = html + line_chart(values, MONTH_LABELS)
     html = html + "<div class='tablelink'><button id='tbtn' data-action='toggle-table'>표로 보기</button></div>"
     html = html + f"<div id='mtable' hidden>{monthly_table(MONTH_LABELS, values)}</div>"
-    box = document.querySelector("#board4")
-    box.innerHTML = html
-    box.hidden = False
+    return html + "</div>"
 
 
-def toggle_table():
-    table = document.querySelector("#mtable")
-    table.hidden = not table.hidden
-    document.querySelector("#tbtn").innerHTML = "표 접기" if not table.hidden else "표로 보기"
+def render_popup():
+    gu = state["gu"]
+    if gu == "":
+        document.querySelector("#popup").hidden = True
+        return
+
+    dong = state["dong"]
+    usg = state["usg"]
+    body = ""
+    if dong != "" and usg != "":
+        document.querySelector("#pop-name").innerHTML = f"{dong} · {usg}"
+        document.querySelector("#pop-sub").innerHTML = f"서울특별시 {gu}"
+        body = body + sec_summary(gu, dong, usg) + sec_usg(gu, dong, usg)
+    else:
+        document.querySelector("#pop-name").innerHTML = gu
+        document.querySelector("#pop-sub").innerHTML = "법정동과 주택 유형을 고르면 더 자세히 나옵니다"
+
+    rank_html, rank = sec_rank(gu)
+    body = body + rank_html + sec_monthly(gu)
+    body = body + f"<div class='foot'>출처: 서울 열린데이터 광장 · 서울시 부동산 전월세가 정보<br>{PERIOD} 확정신고 전세 계약 {TOTAL}건 기준</div>"
+
+    document.querySelector("#pop-body").innerHTML = body
+    document.querySelector("#popup").hidden = False
+    document.querySelector("#pop-body").scrollTop = 0
+    scroller = document.querySelector("#pop-body .bars.scroll")
+    chosen = document.querySelector("#pop-body .bars.scroll .bar-row.sel")
+    scroller.scrollTop = chosen.offsetTop - scroller.clientHeight / 2 + chosen.offsetHeight / 2
 
 
-# ── 선택 흐름 ──────────────────────────────────────────────
+# ── 선택 ──────────────────────────────────────────────────
 
 def fill(select_id, items, placeholder):
     box = document.querySelector("#" + select_id)
@@ -1615,81 +1661,134 @@ def value_of(select_id):
     return document.querySelector("#" + select_id).value
 
 
-def show_hint(message):
-    document.querySelector("#board1").innerHTML = f"<div class='hint'>{message}</div>"
-
-
-def hide(board_id):
-    document.querySelector("#" + board_id).hidden = True
-
-
-def on_gu(event):
-    gu = value_of("gu")
-    hide("board3")
+def set_gu(gu):
+    state["gu"] = gu
+    state["dong"] = ""
+    state["usg"] = ""
+    document.querySelector("#gu").value = gu
     if gu == "":
         fill("dong", [], "자치구 먼저")
         fill("usg", [], "법정동 먼저")
-        hide("board5")
-        hide("board2")
-        hide("board4")
-        show_hint("자치구를 골라 주세요.")
     else:
         fill("dong", sorted(DATA[gu].keys()), "선택")
         fill("usg", [], "법정동 먼저")
-        board_map(gu)
-        board_gu(gu)
-        board_monthly(gu)
-        show_hint("법정동을 골라 주세요.")
+    highlight(gu)
+    render_popup()
+
+
+def set_place(gu, dong, usg):
+    state["gu"] = gu
+    state["dong"] = dong
+    state["usg"] = usg
+    document.querySelector("#gu").value = gu
+    fill("dong", sorted(DATA[gu].keys()), "선택")
+    document.querySelector("#dong").value = dong
+    fill("usg", order_usg(DATA[gu][dong].keys()), "선택")
+    document.querySelector("#usg").value = usg
+    highlight(gu)
+    render_popup()
+
+
+def on_gu(event):
+    set_gu(value_of("gu"))
 
 
 def on_dong(event):
-    gu = value_of("gu")
     dong = value_of("dong")
-    hide("board3")
+    state["dong"] = dong
+    state["usg"] = ""
     if dong == "":
         fill("usg", [], "법정동 먼저")
-        show_hint("법정동을 골라 주세요.")
     else:
-        fill("usg", order_usg(DATA[gu][dong].keys()), "선택")
-        show_hint("주택 유형을 골라 주세요.")
+        fill("usg", order_usg(DATA[state["gu"]][dong].keys()), "선택")
+    render_popup()
 
 
 def on_usg(event):
-    gu = value_of("gu")
-    dong = value_of("dong")
-    usg = value_of("usg")
-    if usg == "":
-        hide("board3")
-        show_hint("주택 유형을 골라 주세요.")
-    else:
-        board_summary(gu, dong, usg)
-        board_usg(gu, dong, usg)
+    state["usg"] = value_of("usg")
+    render_popup()
 
 
-def pick_gu(name):
-    """지도에서 구를 누르면 선택 상자도 같이 바꾼다"""
-    document.querySelector("#gu").value = name
-    on_gu(None)
+# ── 검색 ──────────────────────────────────────────────────
+
+def on_query(event):
+    text = document.querySelector("#q").value.strip()
+    box = document.querySelector("#results")
+    if len(text) == 0:
+        box.innerHTML = "<div class='empty'>동 이름을 입력하거나 지도를 누르세요</div>"
+        return
+
+    hits = []
+    for gu in sorted(DATA.keys()):
+        for dong in sorted(DATA[gu].keys()):
+            if text in dong:
+                hits.append([gu, dong, dong.find(text)])
+            elif text in gu:
+                hits.append([gu, dong, -1])
+    hits.sort(key=lambda h: (h[2] != 0, len(h[1]), h[1]))
+
+    if len(hits) == 0:
+        box.innerHTML = f"<div class='empty'>'{text}' 에 맞는 동이 없습니다</div>"
+        return
+
+    html = ""
+    shown = hits[:40]
+    for i in range(len(shown)):
+        gu = shown[i][0]
+        dong = shown[i][1]
+        at = shown[i][2]
+        if at >= 0:
+            label = dong[:at] + "<em>" + dong[at:at + len(text)] + "</em>" + dong[at + len(text):]
+        else:
+            label = dong
+        html = html + f"<div class='result' data-action='pick-place' data-gu='{gu}' data-dong='{dong}'>"
+        html = html + f"<span>{label}</span><span class='r-sub'>{gu}</span></div>"
+    if len(hits) > len(shown):
+        html = html + f"<div class='empty'>그 밖에 {len(hits) - len(shown)}곳 더 있습니다</div>"
+    box.innerHTML = html
 
 
-def on_body_click(event):
-    """동적으로 그린 요소까지 받도록 body 한 곳에서 처리"""
+# ── 클릭 처리 ──────────────────────────────────────────────
+
+def show_tab(name):
+    document.querySelector("#pane-search").hidden = name != "search"
+    document.querySelector("#pane-pick").hidden = name != "pick"
+    document.querySelector("#tab-search").setAttribute("class", "tab on" if name == "search" else "tab")
+    document.querySelector("#tab-pick").setAttribute("class", "tab on" if name == "pick" else "tab")
+
+
+def toggle_table():
+    table = document.querySelector("#mtable")
+    table.hidden = not table.hidden
+    document.querySelector("#tbtn").innerHTML = "표 접기" if not table.hidden else "표로 보기"
+
+
+def on_click(event):
     node = event.target.closest("[data-action]")
     if not node:
         return
     action = node.getAttribute("data-action")
     if action == "pick-gu":
-        pick_gu(node.getAttribute("data-gu"))
+        set_gu(node.getAttribute("data-gu"))
+    elif action == "pick-place":
+        gu = node.getAttribute("data-gu")
+        dong = node.getAttribute("data-dong")
+        set_place(gu, dong, order_usg(DATA[gu][dong].keys())[0])
+    elif action == "tab":
+        show_tab(node.getAttribute("data-tab"))
     elif action == "toggle-table":
         toggle_table()
+    elif action == "close":
+        document.querySelector("#popup").hidden = True
 
 
-document.body.addEventListener("click", create_proxy(on_body_click))
+document.body.onclick = on_click
 
+draw_map()
 fill("gu", sorted(DATA.keys()), "선택")
 fill("dong", [], "자치구 먼저")
 fill("usg", [], "법정동 먼저")
-show_hint("자치구를 골라 주세요.")
+document.querySelector("#results").innerHTML = "<div class='empty'>동 이름을 입력하거나 지도를 누르세요</div>"
   </script>
 </body>
 </html>
