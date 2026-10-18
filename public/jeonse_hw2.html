@@ -70,6 +70,10 @@
 
     .leaflet-control-attribution { font-family: inherit; font-size: 10px; }
 
+    /* 팝업은 지도 오른쪽을 덮는다. 전환 버튼과 저작자 표시를 그 왼쪽으로 비켜 놓는다. */
+    body:has(#popup:not([hidden])) #basemap { right: 430px; }
+    body:has(#popup:not([hidden])) .leaflet-control-attribution { margin-right: 414px; }
+
     #panel {
       position: fixed; z-index: 4; top: 16px; left: 16px; width: 308px;
       border-radius: 17px; overflow: hidden;
@@ -197,16 +201,22 @@
 
     /* 좁은 화면: 패널은 위, 결과는 아래 시트, 지도 전환은 시트 위로 */
     @media (max-width: 820px) {
-      #panel { top: 10px; left: 10px; right: 10px; width: auto; }
-      .results, #news-list { max-height: 184px; }
+      #panel { top: 10px; left: 10px; right: 10px; width: auto; max-height: 30vh; display: flex;
+               flex-direction: column; }
+      .pane { overflow-y: auto; }
+      .results, #news-list { max-height: none; }
       #legend { left: 10px; bottom: 14px; }
       #basemap { right: 10px; bottom: 14px; }
       #popup {
         top: auto; left: 0; right: 0; bottom: 0; width: auto;
-        max-height: 66vh; border-radius: 18px 18px 0 0;
+        max-height: 54vh; border-radius: 18px 18px 0 0;
       }
-      body:has(#popup:not([hidden])) #legend,
-      body:has(#popup:not([hidden])) #basemap { bottom: calc(66vh + 14px); }
+      /* 패널은 위 30vh, 시트는 아래 54vh. 그 사이 띠에 컨트롤과 저작자 표시를 둔다. */
+      body:has(#popup:not([hidden])) #legend { bottom: calc(54vh + 56px); }
+      body:has(#popup:not([hidden])) #basemap { right: 10px; bottom: calc(54vh + 10px); }
+      body:has(#popup:not([hidden])) .leaflet-control-attribution {
+        margin-right: 0; margin-bottom: calc(54vh + 4px);
+      }
     }
   </style>
 </head>

@@ -8,12 +8,13 @@ const MAX_ITEMS = 12;
 function pick(block, tag) {
   const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`));
   if (!match) return "";
+  // 엔티티를 먼저 풀면 &lt;img&gt; 가 살아 있는 태그로 되살아난다. 태그를 먼저 지운다.
   return match[1]
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
     .trim();
 }
 

@@ -79,6 +79,21 @@ function drawDistricts(geo) {
   });
 }
 
+// 피드는 남이 쓴 글이다. DOM 에 넣기 전에 반드시 막는다.
+function esc(text) {
+  return String(text ?? "").replace(/[&<>"']/g,
+    (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
+function safeHref(url) {
+  try {
+    const parsed = new URL(url, location.origin);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 const USG_ORDER = ["아파트", "오피스텔", "연립다세대", "단독다가구"];
 
 function orderUsg(keys) {
@@ -174,14 +189,15 @@ function renderResults() {
   }
   const hits = searchPlaces(text);
   if (!hits.length) {
-    box.innerHTML = `<div class='empty'>'${text}' 에 맞는 동이 없습니다</div>`;
+    box.innerHTML = `<div class='empty'>'${esc(text)}' 에 맞는 동이 없습니다</div>`;
     return;
   }
   const shown = hits.slice(0, 40);
   box.innerHTML = shown.map(({ gu, dong, at }) => {
     const label = at >= 0
-      ? `${dong.slice(0, at)}<em>${dong.substr(at, text.length)}</em>${dong.slice(at + text.length)}`
-      : dong;
+      ? `${esc(dong.slice(0, at))}<em>${esc(dong.substr(at, text.length))}</em>`
+        + `${esc(dong.slice(at + text.length))}`
+      : esc(dong);
     return `<div class="result" data-gu="${gu}" data-dong="${dong}">`
       + `<span>${label}</span><span class="r-sub">${gu}</span></div>`;
   }).join("")
@@ -256,8 +272,8 @@ function shortWon(value) {
 
 // ── 조각 ──────────────────────────────────────────────────
 
-function barList(rows, selected, scroll) {
-  const top = Math.max(...rows.map((r) => r.value));
+function barList(rows, selected, scroll, scaleTop) {
+  const top = scaleTop ?? Math.max(...rows.map((r) => r.value));
   const body = rows.map((r) => {
     const width = 2 + 98 * r.value / top;
     const cls = ["bar-row", r.name === selected ? "sel" : "", r.thin ? "thin" : ""]
@@ -347,10 +363,12 @@ function secDongRank(gu, usg, dong) {
   }
   const head = shown.slice(0, Math.min(5, shown.length));
   const tail = shown.slice(head.length);
+  const scaleTop = rows.length ? rows[0].value : 1;
   return `<div class="sec" id="dong-rank" data-usg="${usg}">`
     + `<div class="sec-t">${gu} 동별 ${usg} 평균`
     + `<span>비싼 곳부터 ${rows.length}곳. 거래가 적은 동은 평균이 흔들립니다</span></div>`
-    + barList(head, dong, false) + folded + (tail.length ? barList(tail, dong, false) : "")
+    + barList(head, dong, false, scaleTop) + folded
+    + (tail.length ? barList(tail, dong, false, scaleTop) : "")
     + `</div>`;
 }
 
@@ -445,9 +463,15 @@ async function loadNews() {
     if (!res.ok) throw new Error(res.status);
     const { items } = await res.json();
     list.innerHTML = items.length
-      ? items.map((it) => `<a class="news" href="${it.link}" target="_blank" rel="noopener">`
-          + `<span class="news-t">${it.title}</span>`
-          + `<span class="news-m">${it.source || ""}</span></a>`).join("")
+      ? items.map((it) => {
+          const href = safeHref(it.link);
+          const meta = [it.source, it.date].filter(Boolean).map(esc).join(" · ");
+          const open = href ? `<a class="news" href="${esc(href)}" target="_blank" rel="noopener">`
+                            : `<div class="news">`;
+          const close = href ? "</a>" : "</div>";
+          return `${open}<span class="news-t">${esc(it.title)}</span>`
+            + `<span class="news-m">${meta}</span>${close}`;
+        }).join("")
       : `<div class="empty">가져온 기사가 없습니다. 아래 공식 자료를 보세요</div>`;
   } catch {
     newsLoaded = false;
