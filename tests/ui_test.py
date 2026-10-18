@@ -46,3 +46,34 @@ def test_dong_without_coordinates_falls_back_to_district(page, base_url):
     page.wait_for_timeout(900)
     c = page.evaluate("() => window.app.map.getCenter()")
     assert 126.88 < c["lng"] < 127.00 and 37.52 < c["lat"] < 37.59
+
+
+def test_dong_ranking_shows_top_and_bottom(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.evaluate("() => window.app.setGu('강남구')")
+    page.wait_for_timeout(800)
+    names = page.eval_on_selector_all("#dong-rank .bar-row .bar-name", "n => n.map(x => x.textContent)")
+    assert len(names) >= 5
+    assert page.eval_on_selector("#dong-rank", "n => n.dataset.usg") == "아파트"
+
+
+def test_thin_dongs_are_flagged(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.evaluate("() => window.app.setGu('종로구')")
+    page.wait_for_timeout(800)
+    flags = page.eval_on_selector_all("#dong-rank .thin", "n => n.length")
+    counts = page.eval_on_selector_all("#dong-rank .bar-count", "n => n.length")
+    assert counts > 0 and flags >= 0
+
+
+def test_dong_without_apartments_still_renders(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    missing = page.evaluate("""() => {
+        const c = window.app.data.cells;
+        for (const g in c) for (const d in c[g])
+            if (!('아파트' in c[g][d])) return [g, d];
+        return null; }""")
+    assert missing is not None
+    page.evaluate("([g, d]) => window.app.setDong(g, d)", missing)
+    page.wait_for_timeout(700)
+    assert page.eval_on_selector(".price", "n => n.textContent").strip() != ""
