@@ -406,4 +406,38 @@ function toggleTable() {
   document.querySelector("#tbtn").textContent = table.hidden ? "표로 보기" : "표 접기";
 }
 
-function loadNews() {}
+const SOURCES = [
+  ["국토교통부 보도자료", "https://www.molit.go.kr/USR/NEWS/m_71/lst.jsp"],
+  ["서울시 주택정책", "https://news.seoul.go.kr/citybuild/"],
+  ["한국부동산원 부동산통계", "https://www.reb.or.kr/r-one/"],
+  ["국가법령정보센터 주택임대차보호법", "https://www.law.go.kr/법령/주택임대차보호법"],
+];
+
+let newsLoaded = false;
+
+function renderSources() {
+  document.querySelector("#news-sources").innerHTML =
+    `<div class="src-t">공식 자료</div>` + SOURCES.map(([name, href]) =>
+      `<a href="${href}" target="_blank" rel="noopener">${name}</a>`).join("");
+}
+
+async function loadNews() {
+  renderSources();
+  if (newsLoaded) return;
+  newsLoaded = true;
+  const list = document.querySelector("#news-list");
+  list.innerHTML = `<div class="empty">불러오는 중입니다</div>`;
+  try {
+    const res = await fetch("/api/news");
+    if (!res.ok) throw new Error(res.status);
+    const { items } = await res.json();
+    list.innerHTML = items.length
+      ? items.map((it) => `<a class="news" href="${it.link}" target="_blank" rel="noopener">`
+          + `<span class="news-t">${it.title}</span>`
+          + `<span class="news-m">${it.source || ""}</span></a>`).join("")
+      : `<div class="empty">가져온 기사가 없습니다. 아래 공식 자료를 보세요</div>`;
+  } catch {
+    newsLoaded = false;
+    list.innerHTML = `<div class="empty">기사를 불러오지 못했습니다. 아래 공식 자료를 보세요</div>`;
+  }
+}

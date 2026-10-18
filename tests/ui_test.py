@@ -77,3 +77,20 @@ def test_dong_without_apartments_still_renders(page, base_url):
     page.evaluate("([g, d]) => window.app.setDong(g, d)", missing)
     page.wait_for_timeout(700)
     assert page.eval_on_selector(".price", "n => n.textContent").strip() != ""
+
+
+def test_news_tab_lists_items_or_falls_back(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.click("#tab-news")
+    page.wait_for_timeout(2500)
+    items = page.eval_on_selector_all("#news-list a", "n => n.length")
+    sources = page.eval_on_selector_all("#news-sources a", "n => n.length")
+    assert items > 0 or sources > 0
+
+
+def test_news_failure_shows_official_links(page, base_url):
+    page.goto(f"{base_url}/jeonse_hw2.html"); page.wait_for_selector("path.gu")
+    page.route("**/api/news", lambda route: route.abort())
+    page.click("#tab-news")
+    page.wait_for_timeout(1500)
+    assert page.eval_on_selector_all("#news-sources a", "n => n.length") >= 3

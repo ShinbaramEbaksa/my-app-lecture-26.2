@@ -1,10 +1,10 @@
 {
-  // Cloudflare Workers - static assets only (no server-side script).
-  // Without this file `npx wrangler deploy` falls back to auto-detection,
-  // which fails whenever the repo root has no HTML file.
+  // 정적 자산 + /api/news 중계. 뉴스 피드가 CORS 를 열어 주지 않아 서버 쪽 중계가 필요하다.
   "name": "my-app-lecture-26-2",
   "compatibility_date": "2026-09-11",
+  "main": "src/worker.js",
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    "binding": "ASSETS"
   }
 }

@@ -180,6 +180,17 @@
     th:first-child, td:first-child { text-align: left; }
     th { color: var(--ink-4); font-weight: 500; }
     td { font-variant-numeric: tabular-nums; }
+    #news-list { max-height: 246px; overflow-y: auto; }
+    a.news { display: block; padding: 9px 10px; border-radius: 9px; text-decoration: none; color: inherit; }
+    a.news:hover { background: rgba(181, 50, 31, .1); }
+    .news-t { display: block; font-size: 13.5px; line-height: 1.45; }
+    .news-m { display: block; margin-top: 3px; font-size: 11px; color: var(--ink-4); }
+    #news-sources { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--rule); }
+    .src-t { font-size: 11px; color: var(--ink-4); margin-bottom: 5px; }
+    #news-sources a { display: block; padding: 6px 10px; border-radius: 8px;
+                      font-size: 13px; color: var(--ink-2); text-decoration: none; }
+    #news-sources a:hover { background: rgba(118, 118, 128, .14); }
+
     .foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule);
             font-size: 10.5px; color: var(--ink-4); line-height: 1.7; }
 
